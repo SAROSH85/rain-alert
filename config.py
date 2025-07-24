@@ -1,0 +1,9 @@
+
+import os
+
+API_KEY = os.getenv("API_KEY")
+LAT = 19.0760
+LON = 72.8777
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
