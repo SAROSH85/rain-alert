@@ -1,19 +1,19 @@
-# main.py
-
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from hybrid_alert import analyze_rain_data
 
 app = FastAPI()
 
 @app.get("/")
-def home():
-    return {"message": "✅ Rain Alert Agent is live."}
+async def root():
+    return {"message": "Rain Alert API is live!"}
 
 @app.post("/alert/send")
-def send_alert():
-    """
-    This endpoint triggers the hybrid rain alert analysis.
-    It fetches data, analyzes, and sends updates via Telegram & Email.
-    """
-    result = analyze_rain_data()
+async def send_alert(request: Request):
+    try:
+        data = await request.json()
+        mock = data.get("mock", False)
+    except:
+        mock = False  # fallback if no JSON payload is provided
+
+    result = analyze_rain_data(mock=mock)
     return {"result": result}

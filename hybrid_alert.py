@@ -1,49 +1,40 @@
-# hybrid_alert.py
-
 from weather import fetch_nowcast, fetch_rainfall, fetch_forecast
 from notify import send_telegram_alert, send_email_alert
 from charts import generate_rainfall_chart
 
-def analyze_rain_data():
-    alert_msgs = []
-    chart_img = None
+def analyze_rain_data(mock=False):
+    if mock:
+        message = (
+            "🌧️ *Mock Rain Alert*: Simulated heavy rainfall detected in Mumbai.\n"
+            "Take precautions. Stay safe! 🚨"
+        )
+        chart_path = "mock_rainfall_chart.png"
+        send_telegram_alert(message, chart_path)
+        send_email_alert("Mock Rain Alert 🚨", message)
+        return "✅ Mock alert sent"
 
-    # 1. Check nowcast
     nowcast = fetch_nowcast()
-    if nowcast:
-        alert_msgs.append("🌧️ IMD Nowcast Alert:\n" + "\n".join([f"• {a}" for a in nowcast]))
-
-    # 2. Check rainfall
     rainfall = fetch_rainfall()
-    if rainfall:
-        try:
-            today = rainfall["today"]
-            actual = float(today["actual"])
-            normal = float(today["normal"])
-            diff = actual - normal
-
-            if diff > 3:
-                status = "⚠️ Excess"
-            elif diff < -3:
-                status = "🔴 Deficit"
-            else:
-                status = "🟢 Normal"
-
-            alert_msgs.append(f"📊 Rainfall Today: {actual}mm (Normal: {normal}mm) → {status}")
-            chart_img = generate_rainfall_chart(actual, normal)
-        except Exception as e:
-            print("Rainfall parse error:", e)
-
-    # 3. Forecast fallback
     forecast = fetch_forecast()
+
+    alert_parts = []
+
+    if nowcast:
+        alert_parts.append("📡 *Nowcast:* " + nowcast)
+
+    if rainfall:
+        alert_parts.append("🌧️ *Rainfall Radar:* " + rainfall)
+
     if forecast:
-        summary = "\n".join([f"🔮 {f}" for f in forecast])
-        alert_msgs.append("📅 3-Day Forecast:\n" + summary)
+        alert_parts.append("📅 *Forecast:* " + forecast)
 
-    # 4. Final alert
-    final_alert = "\n\n".join(alert_msgs) if alert_msgs else "☀️ No rain alerts or forecast available currently."
+    if not alert_parts:
+        return "☀️ No rain alerts or forecast available currently."
 
-    # 5. Send alerts
+    final_alert = "\n\n".join(alert_parts)
+    chart_img = generate_rainfall_chart()
+
     send_telegram_alert(final_alert, chart_img)
-    send_email_alert("🌦️ Mumbai Rain Alert Update", final_alert, chart_img)
-    return final_alert
+    send_email_alert("Hybrid Rain Alert 🚨", final_alert)
+
+    return "✅ Hybrid alert sent"
