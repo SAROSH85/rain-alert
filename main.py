@@ -1,31 +1,15 @@
+# main.py
 
 from fastapi import FastAPI
-from weather import check_rain_forecast
-from telegram import send_telegram_message
+from hybrid_alert import analyze_rain_data
 
-app = FastAPI(title="Mumbai Rain Alert AI Agent")
+app = FastAPI()
 
 @app.get("/")
 def root():
-    return {"message": "Mumbai Rain Alert AI Agent is running."}
+    return {"message": "🌦️ Rain Alert Agent is live!"}
 
-@app.get("/rain-alert")
-def rain_alert():
-    rain_data = check_rain_forecast()
-
-    if rain_data:
-        msg = "🌧️ Rain Alert for Mumbai:\n" + "\n".join([f"{r['time']} – {r['amount_mm']} mm" for r in rain_data])
-        send_telegram_message(msg)
-        return {
-            "status": "rain_expected",
-            "forecast": rain_data,
-            "message": msg
-        }
-    else:
-        msg = "✅ No rain expected in the next 6 hours in Mumbai."
-        send_telegram_message(msg)
-        return {
-            "status": "clear",
-            "forecast": [],
-            "message": msg
-        }
+@app.post("/alert/send")
+def send_alert():
+    result = analyze_rain_data()
+    return {"status": "sent", "message": result}
