@@ -2,60 +2,66 @@ import logging
 import requests
 from charts import generate_rainfall_chart
 from notify import send_telegram_alert, send_email_alert
-from config import LAT, LON, WINDY_API_KEY, ACCU_API_KEY
+from config import LAT, LON, WINDY_API_KEY, ACCU_API_KEY, GFS_URL, RADAR_IMAGE_URL
 
-def get_windy_forecast(lat, lon):
+def fetch_windy_forecast():
     try:
-        url = f"https://api.windy.com/api/point-forecast/v2?lat={lat}&lon={lon}&key={WINDY_API_KEY}"
-        resp = requests.get(url, timeout=10)
-        if resp.status_code == 200:
-            return resp.json()
+        url = f"https://api.windy.com/api/point-forecast/v2"
+        params = {
+            "lat": LAT,
+            "lon": LON,
+            "model": "gfs",
+            "parameters": ["precipitation"],
+            "key": 9S9NyPXTCsB882Lbvjw1EH56EfwHQ9IQ
+        }
+        r = requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        return data.get("precipitation", [])
     except Exception as e:
-        logging.error(f"Windy fetch error: {e}")
-    return None
+        logging.error(f"❌ Windy API error: {e}")
+        return []
 
-def get_accuweather_forecast(lat, lon):
+def fetch_accuweather_forecast():
     try:
-        loc_url = f"http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey={ACCU_API_KEY}&q={lat},{lon}"
-        loc_resp = requests.get(loc_url, timeout=10)
-        if loc_resp.status_code != 200:
-            return None
-        location_key = loc_resp.json().get("Key")
-
-        forecast_url = f"http://dataservice.accuweather.com/forecasts/v1/hourly/1hour/{location_key}?apikey={ACCU_API_KEY}&details=true"
-        forecast_resp = requests.get(forecast_url, timeout=10)
-        if forecast_resp.status_code == 200:
-            return forecast_resp.json()
+        url = f"http://dataservice.accuweather.com/forecasts/v1/hourly/12hour/204842?apikey={JSZBzteqfPETsbKZIfUWGaRdXFRNuWSV}&details=true&metric=true"
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        return r.json()
     except Exception as e:
-        logging.error(f"AccuWeather fetch error: {e}")
-    return None
+        logging.error(f"❌ AccuWeather API error: {e}")
+        return []
 
-def analyze_rain_data(mock=False):
+def analyze_rain_data(mock: bool = False):
     logging.info("🔄 Starting rain analysis...")
 
     if mock:
+        logging.info("🔄 MOCK mode: generating fake rain alert.")
         rain_data = [("Hour 1", 10), ("Hour 2", 20), ("Hour 3", 30)]
         chart_path = generate_rainfall_chart(rain_data, "mock_chart.png")
-        msg = "🌧 Mock Rain Alert: Simulated heavy rainfall detected.\nStay safe!"
-        send_telegram_alert(msg, chart_path)
-        send_email_alert("🌧 Mock Rain Alert", msg, chart_path)
+        alert_message = "🌧 Mock Rain Alert: Heavy rain expected. Stay safe!"
+        send_telegram_alert(alert_message, chart_path)
+        send_email_alert("🌧 Mock Rain Alert", alert_message, chart_path)
         return {"result": "✅ Mock alert sent"}
 
-    windy_data = get_windy_forecast(LAT, LON)
-    accuweather_data = get_accuweather_forecast(LAT, LON)
+    # --- Real data ---
+    windy_data = fetch_windy_forecast()
+    accuweather_data = fetch_accuweather_forecast()
 
-    windy_rain = windy_data.get("rain", {}).get("probability", 0) if windy_data else 0
-    accu_rain = accuweather_data[0].get("PrecipitationProbability", 0) if accuweather_data else 0
+    rain_forecast = 0
+    if windy_data:
+        rain_forecast = max(rain_forecast, max(windy_data) if isinstance(windy_data, list) else 0)
+    if accuweather_data:
+        acc_rain = max([h.get("Rain", {}).get("Value", 0) for h in accuweather_data])
+        rain_forecast = max(rain_forecast, acc_rain)
 
-    max_rain = max(windy_rain, accu_rain)
-    logging.info(f"Windy rain: {windy_rain}%, Accu rain: {accu_rain}%")
+    logging.info(f"🌧 Rain forecast: {rain_forecast}")
 
-    if max_rain > 60:
-        rain_data = [("Next Hour", max_rain)]
-        chart_path = generate_rainfall_chart(rain_data, "rain_alert.png")
-        msg = f"🌧 Rain Alert: Probability {max_rain}%.\nTake precautions!"
-        send_telegram_alert(msg, chart_path)
-        send_email_alert("🌧 Rain Alert", msg, chart_path)
-        return {"result": f"🚨 Rain alert triggered ({max_rain}%)"}
+    if rain_forecast > 5:
+        chart_path = generate_rainfall_chart([("Forecast", rain_forecast)], "live_chart.png")
+        alert_message = f"🌧 Rain Alert: {rain_forecast} mm predicted. Carry umbrellas!"
+        send_telegram_alert(alert_message, chart_path)
+        send_email_alert("🌧 Rain Alert", alert_message, chart_path)
+        return {"result": "🚨 Rain alert triggered"}
 
     return {"result": "☀️ No rain alerts or forecast available currently."}

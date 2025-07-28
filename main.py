@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from hybrid_alert import analyze_rain_data
 
 app = FastAPI()
 
@@ -6,11 +7,8 @@ app = FastAPI()
 def home():
     return {"message": "Rain Alert API is live!"}
 
-@app.get("/debug/env")
-def debug_env():
-    import os
-    return {
-        "TELEGRAM_BOT_TOKEN": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
-        "EMAIL_SENDER": os.getenv("EMAIL_SENDER"),
-        "EMAIL_RECEIVER": os.getenv("EMAIL_RECEIVER"),
-    }
+@app.post("/alert/send")
+def send_alert(request: Request):
+    body = request.json() if request.body() else {}
+    mock = body.get("mock", False)
+    return analyze_rain_data(mock=mock)
