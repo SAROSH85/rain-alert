@@ -10,12 +10,12 @@ def home():
     return {"message": "Rain Alert API is live!"}
 
 @app.post("/alert/send")
-def send_alert(request: Request):
+async def send_alert(request: Request):
     try:
-        data = request.json()
-        mock = data.get("mock", False)
-    except Exception:
-        mock = False
+        body = await request.json()
+    except:
+        body = {}
 
+    mock = body.get("mock", False)
     result = analyze_rain_data(mock=mock)
     return result
