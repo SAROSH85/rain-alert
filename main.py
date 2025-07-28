@@ -4,11 +4,12 @@ from hybrid_alert import analyze_rain_data
 app = FastAPI()
 
 @app.get("/")
-def home():
+async def root():
     return {"message": "Rain Alert API is live!"}
 
 @app.post("/alert/send")
-def send_alert(request: Request):
-    body = request.json() if request.body() else {}
+async def send_alert(request: Request):
+    body = await request.json()   # ✅ Fix: await is required
     mock = body.get("mock", False)
-    return analyze_rain_data(mock=mock)
+    result = analyze_rain_data(mock=mock)
+    return result
