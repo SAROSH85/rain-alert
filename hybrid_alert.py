@@ -12,7 +12,7 @@ def fetch_windy_forecast():
             "lon": LON,
             "model": "gfs",
             "parameters": ["precipitation"],
-            "key": 9S9NyPXTCsB882Lbvjw1EH56EfwHQ9IQ
+            "key": "9S9NyPXTCsB882Lbvjw1EH56EfwHQ9IQ"
         }
         r = requests.get(url, params=params, timeout=10)
         r.raise_for_status()
