@@ -25,16 +25,28 @@ def send_email_alert(subject: str, body: str):
     except Exception as e:
         print(f"❌ Email error: {e}")
 
-def send_telegram_alert(message: str):
-    try:
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        data = {
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": message,
-            "parse_mode": "HTML"
-        }
-        response = requests.post(url, data=data)
-        response.raise_for_status()
-        print("✅ Telegram alert sent!")
-    except Exception as e:
-        print(f"❌ Telegram error: {e}")
+import requests
+import os
+
+def send_telegram_alert(message, image_path=None):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        raise ValueError("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID")
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": message}
+
+    # Send message
+    resp = requests.post(url, json=payload)
+    print("Telegram message:", resp.status_code, resp.text)
+
+    # If image exists, send it
+    if image_path and os.path.exists(image_path):
+        photo_url = f"https://api.telegram.org/bot{token}/sendPhoto"
+        with open(image_path, "rb") as photo:
+            files = {"photo": photo}
+            data = {"chat_id": chat_id}
+            resp = requests.post(photo_url, data=data, files=files)
+            print("Telegram image:", resp.status_code, resp.text)
