@@ -1,29 +1,32 @@
-import os
 import smtplib
-import requests
+import ssl
 from email.message import EmailMessage
-from config import (
-    EMAIL_SENDER,
-    EMAIL_RECEIVER,
-    TELEGRAM_BOT_TOKEN,
-    TELEGRAM_CHAT_ID,
-)
+import os
 
-def send_email_alert(subject: str, body: str):
-    msg = EmailMessage()
-    msg.set_content(body)
-    msg["Subject"] = subject
-    msg["From"] = EMAIL_SENDER
-    msg["To"] = EMAIL_RECEIVER
+from config import EMAIL_SENDER, EMAIL_RECEIVER, EMAIL_PASSWORD
 
+def send_email_alert(subject, message, image_path=None):
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login(EMAIL_SENDER, os.environ.get("EMAIL_PASSWORD"))
+        msg = EmailMessage()
+        msg.set_content(message)
+        msg["Subject"] = subject
+        msg["From"] = EMAIL_SENDER
+        msg["To"] = EMAIL_RECEIVER
+
+        if image_path and os.path.exists(image_path):
+            with open(image_path, "rb") as f:
+                img_data = f.read()
+            msg.add_attachment(img_data, maintype="image", subtype="png", filename="chart.png")
+
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
             server.send_message(msg)
+
         print("✅ Email sent successfully!")
+
     except Exception as e:
-        print(f"❌ Email error: {e}")
+        print("❌ Email error:", e)
 
 import requests
 import os
