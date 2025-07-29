@@ -1,49 +1,35 @@
-import smtplib
 import os
-import requests
+import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.mime.image import MIMEImage
-from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, EMAIL_SENDER, EMAIL_RECEIVER
+from config import EMAIL_SENDER, EMAIL_RECEIVER, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+import requests
+import logging
 
-def send_telegram_alert(message: str, chart_path: str = None):
-    token = TELEGRAM_BOT_TOKEN
-    chat_id = TELEGRAM_CHAT_ID
-    send_url = f"https://api.telegram.org/bot{token}/sendMessage"
-
-    # Send text alert
-    requests.post(send_url, data={"chat_id": chat_id, "text": message})
-
-    # If chart is available, send chart image
-    if chart_path and os.path.exists(chart_path):
-        with open(chart_path, 'rb') as photo:
-            files = {'photo': photo}
-            send_photo_url = f"https://api.telegram.org/bot{token}/sendPhoto"
-            requests.post(send_photo_url, data={"chat_id": chat_id}, files=files)
-
-def send_email_alert(subject: str, body: str, chart_path: str = None):
+def send_email(subject: str, body: str):
     try:
         msg = MIMEMultipart()
-        msg["Subject"] = subject
         msg["From"] = EMAIL_SENDER
         msg["To"] = EMAIL_RECEIVER
-
-        # Add text content
+        msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain"))
 
-        # Attach chart image if available
-        if chart_path and os.path.exists(chart_path):
-            with open(chart_path, 'rb') as f:
-                img_data = f.read()
-                image = MIMEImage(img_data, name=os.path.basename(chart_path))
-                msg.attach(image)
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(EMAIL_SENDER, os.environ["EMAIL_PASSWORD"])
+            server.sendmail(EMAIL_SENDER, EMAIL_RECEIVER, msg.as_string())
 
-        # Send the email
-        with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
-            smtp.starttls()
-            smtp.login(EMAIL_SENDER, os.getenv("EMAIL_PASSWORD"))
-            smtp.sendmail(EMAIL_SENDER, EMAIL_RECEIVER, msg.as_string())
-        return True
+        logging.info("✅ Email sent successfully!")
     except Exception as e:
-        print("Email error:", e)
-        return False
+        logging.error(f"❌ Email error: {e}")
+
+def send_telegram(message: str):
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+        response = requests.post(url, data=data)
+        if response.status_code != 200:
+            raise Exception(response.text)
+        logging.info("✅ Telegram message sent!")
+    except Exception as e:
+        logging.error(f"❌ Telegram error: {e}")
