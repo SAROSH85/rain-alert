@@ -1,35 +1,40 @@
 import os
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from config import EMAIL_SENDER, EMAIL_RECEIVER, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 import requests
-import logging
+from email.message import EmailMessage
+from config import (
+    EMAIL_SENDER,
+    EMAIL_RECEIVER,
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID,
+)
 
-def send_email(subject: str, body: str):
+def send_email_alert(subject: str, body: str):
+    msg = EmailMessage()
+    msg.set_content(body)
+    msg["Subject"] = subject
+    msg["From"] = EMAIL_SENDER
+    msg["To"] = EMAIL_RECEIVER
+
     try:
-        msg = MIMEMultipart()
-        msg["From"] = EMAIL_SENDER
-        msg["To"] = EMAIL_RECEIVER
-        msg["Subject"] = subject
-        msg.attach(MIMEText(body, "plain"))
-
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
             server.starttls()
-            server.login(EMAIL_SENDER, os.environ["EMAIL_PASSWORD"])
-            server.sendmail(EMAIL_SENDER, EMAIL_RECEIVER, msg.as_string())
-
-        logging.info("✅ Email sent successfully!")
+            server.login(EMAIL_SENDER, os.environ.get("EMAIL_PASSWORD"))
+            server.send_message(msg)
+        print("✅ Email sent successfully!")
     except Exception as e:
-        logging.error(f"❌ Email error: {e}")
+        print(f"❌ Email error: {e}")
 
-def send_telegram(message: str):
+def send_telegram_alert(message: str):
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        data = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+        data = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message,
+            "parse_mode": "HTML"
+        }
         response = requests.post(url, data=data)
-        if response.status_code != 200:
-            raise Exception(response.text)
-        logging.info("✅ Telegram message sent!")
+        response.raise_for_status()
+        print("✅ Telegram alert sent!")
     except Exception as e:
-        logging.error(f"❌ Telegram error: {e}")
+        print(f"❌ Telegram error: {e}")
