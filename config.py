@@ -15,7 +15,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 # --- Email ---
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER")
-EMAIL_PASSWORD = os.getenv("gfwmhqudmkubmrew")  # ✅ This must be your 16-char Gmail App Password
+EMAIL_PASSWORD = os.getenv("uhskfnuuflrkshft")  # ✅ This must be your 16-char Gmail App Password
 
 # --- IMD Data Sources ---
 GFS_URL = "https://mausam.imd.gov.in/api/gfs/mumbai.json"
