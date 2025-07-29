@@ -21,12 +21,8 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 GFS_URL = "https://mausam.imd.gov.in/api/gfs/mumbai.json"
 RADAR_IMAGE_URL = "https://mausam.imd.gov.in/radar/mumbai_latest.png"
 
+# --- Debug block ---
 if __name__ == "__main__":
-    print("✅ Windy Key:", bool(WINDY_API_KEY))
-    print("✅ AccuWeather Key:", bool(ACCU_API_KEY))
-    print("🤖 Telegram Token:", bool(TELEGRAM_BOT_TOKEN))
-    print("📩 Email Sender:", EMAIL_SENDER)
-    if __name__ == "__main__":
     print("✅ Windy API Key Present:", bool(WINDY_API_KEY))
     print("✅ AccuWeather Key Present:", bool(ACCU_API_KEY))
     print("🤖 Telegram Bot Token Present:", bool(TELEGRAM_BOT_TOKEN))
