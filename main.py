@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from hybrid_alert import analyze_rain_data
+from config import EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER
 
 app = FastAPI()
 
@@ -18,4 +19,13 @@ async def send_alert(request: Request):
 
 @app.get("/")
 async def root():
-    return {"message": "Rain Alert API is live!"}
+    return {"result": "☀️ No rain alerts or forecast available currently."}
+
+# 🔍 DEBUG ENV ENDPOINT
+@app.get("/debug/env")
+async def debug_env():
+    return {
+        "EMAIL_SENDER": EMAIL_SENDER,
+        "EMAIL_PASSWORD_PRESENT": bool(EMAIL_PASSWORD),
+        "EMAIL_RECEIVER": EMAIL_RECEIVER
+    }
