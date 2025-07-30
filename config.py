@@ -5,8 +5,7 @@ LAT = float(os.getenv("LAT", 19.0760))  # Mumbai
 LON = float(os.getenv("LON", 72.8777))  # Mumbai
 
 # --- API Keys ---
-WINDY_API_KEY = os.getenv("WINDY_API_KEY")  # ✅ This must match your Render env var name
-ACCU_API_KEY = os.getenv("ACCU_API_KEY")
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
 # --- Telegram Bot ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -23,8 +22,6 @@ RADAR_IMAGE_URL = "https://mausam.imd.gov.in/radar/mumbai_latest.png"
 
 # --- Debug block ---
 if __name__ == "__main__":
-    print("✅ Windy API Key Present:", bool(WINDY_API_KEY))
-    print("✅ AccuWeather Key Present:", bool(ACCU_API_KEY))
     print("🤖 Telegram Bot Token Present:", bool(TELEGRAM_BOT_TOKEN))
     print("📨 EMAIL_SENDER:", EMAIL_SENDER)
     print("📨 EMAIL_RECEIVER:", EMAIL_RECEIVER)
