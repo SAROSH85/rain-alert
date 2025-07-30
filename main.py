@@ -39,3 +39,14 @@ async def debug_email_config():
         "EMAIL_PASSWORD_PRESENT": bool(EMAIL_PASSWORD),
         "EMAIL_PASSWORD_PREVIEW": EMAIL_PASSWORD[:4] + "****" + EMAIL_PASSWORD[-2:] if EMAIL_PASSWORD else None
     }
+
+from datetime import datetime
+
+@app.get("/debug/time")
+async def debug_time():
+    now = datetime.now()
+    return {
+        "server_time": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "hour": now.hour,
+        "minute": now.minute
+    }
