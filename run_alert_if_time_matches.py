@@ -1,24 +1,28 @@
-import datetime
-import requests
+from datetime import datetime, timedelta
+from hybrid_alert import analyze_rain_data
 
-# Your deployed app URL
-ENDPOINT = "https://rain-alert-eagu.onrender.com/alert/send"
-
-# IST Timezone = UTC+5:30
-TRIGGER_HOURS = [9, 11, 13, 15, 17, 18, 19, 20]  # IST hours
-
-def is_trigger_time():
-    now_utc = datetime.datetime.utcnow()
-    now_ist = now_utc + datetime.timedelta(hours=5, minutes=30)
-    return now_ist.hour in TRIGGER_HOURS
+# List of trigger hours in IST
+TRIGGER_HOURS = [9, 11, 13, 15, 17, 18, 19, 20]
 
 def run():
-    if is_trigger_time():
-        print("✅ Triggering rain alert...")
-        r = requests.post(ENDPOINT)
-        print(f"✅ Response {r.status_code}: {r.text}")
-    else:
-        print("⏳ Not a trigger time. Skipping.")
+    # Convert UTC to IST (+5:30)
+    now_utc = datetime.utcnow()
+    now_ist = now_utc + timedelta(hours=5, minutes=30)
 
-if __name__ == "__main__":
-    run()
+    hour = now_ist.hour
+    minute = now_ist.minute
+
+    # Trigger at every 30th minute and only at specified hours
+    if minute in [0, 30] and hour in TRIGGER_HOURS:
+        result = analyze_rain_data()
+        return {
+            "triggered": True,
+            "time": now_ist.strftime("%Y-%m-%d %H:%M:%S"),
+            "result": result
+        }
+    else:
+        return {
+            "triggered": False,
+            "time": now_ist.strftime("%Y-%m-%d %H:%M:%S"),
+            "reason": f"Not in TRIGGER_HOURS or not at 00 or 30 minutes (currently {hour}:{minute})"
+        }
