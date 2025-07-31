@@ -18,7 +18,7 @@ async def send_alert(request: Request):
     except Exception as e:
         return {"error": str(e)}
 
-@app.post("/alert/timecheck", methods=["GET", "POST"])
+@app.api_route("/alert/timecheck", methods=["GET", "POST"])
 async def alert_if_match():
     return run()
 
