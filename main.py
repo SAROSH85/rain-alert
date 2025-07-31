@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from hybrid_alert import analyze_rain_data
 from config import EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_RECEIVER
+from run_alert_if_time_matches import run
 
 app = FastAPI()
 
@@ -17,20 +18,15 @@ async def send_alert(request: Request):
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/alert/timecheck")
+async def alert_if_match():
+    return run()
+
 @app.get("/")
 async def root():
     return {"result": "☀️ No rain alerts or forecast available currently."}
 
-# 🔍 DEBUG: Check loaded env vars
-@app.get("/debug/env")
-async def debug_env():
-    return {
-        "EMAIL_SENDER": EMAIL_SENDER,
-        "EMAIL_PASSWORD_PRESENT": bool(EMAIL_PASSWORD),
-        "EMAIL_RECEIVER": EMAIL_RECEIVER
-    }
-
-# 🔍 DEBUG: Show masked password
+# Optional: debug endpoint
 @app.get("/debug/email")
 async def debug_email_config():
     return {
@@ -40,11 +36,12 @@ async def debug_email_config():
         "EMAIL_PASSWORD_PREVIEW": EMAIL_PASSWORD[:4] + "****" + EMAIL_PASSWORD[-2:] if EMAIL_PASSWORD else None
     }
 
-from datetime import datetime
-
 @app.get("/debug/time")
 async def debug_time():
-    now = datetime.now()
+    from datetime import datetime
+    import pytz
+    ist = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(ist)
     return {
         "server_time": now.strftime("%Y-%m-%d %H:%M:%S"),
         "hour": now.hour,
