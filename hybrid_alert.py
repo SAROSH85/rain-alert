@@ -41,11 +41,17 @@ def analyze_rain_data(mock: bool = False):
 
     logging.info(f"🌧 Total Rain Forecast: {rain_forecast} mm")
 
-    if rain_forecast > 5:
-        chart_path = generate_rainfall_chart([("Forecast", rain_forecast)], "live_chart.png")
-        alert_message = f"🌧 Rain Alert: {rain_forecast} mm predicted. Carry umbrellas!"
-        send_telegram_alert(alert_message, chart_path)
-        send_email_alert("🌧 Rain Alert", alert_message, chart_path)
-        return {"result": "🚨 Rain alert triggered"}
+    if rain_forecast > 3:
+    chart_path = generate_rainfall_chart([("Forecast", rain_forecast)], "live_chart.png")
+    alert_message = f"🌧 Rain Alert: {rain_forecast} mm predicted. Carry umbrellas!"
+    send_telegram_alert(alert_message, chart_path)
+    send_email_alert("🌧 Rain Alert", alert_message, chart_path)
+    return {"result": "🚨 Rain alert triggered"}
+
+    # ✅ Always send update, even if no rain
+    alert_message = "☀️ No rain alerts or forecast available currently."
+    send_telegram_alert(alert_message)
+    send_email_alert("☀️ No Rain Alert", alert_message)
+    return {"result": alert_message}
 
     return {"result": "☀️ No rain alerts or forecast available currently."}
