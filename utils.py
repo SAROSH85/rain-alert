@@ -1,8 +1,9 @@
+
 from datetime import datetime
-import pytz
+from zoneinfo import ZoneInfo
 
 def get_server_time_info():
-    ist = pytz.timezone("Asia/Kolkata")
+    ist = ZoneInfo("Asia/Kolkata")
     now = datetime.now(ist)
     return {
         "server_time": now.strftime("%Y-%m-%d %H:%M:%S"),
