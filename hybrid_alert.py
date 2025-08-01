@@ -3,10 +3,7 @@ import requests
 from charts import generate_rainfall_chart
 from notify import send_telegram_alert, send_email_alert
 from config import LAT, LON, OPENWEATHER_API_KEY, RADAR_IMAGE_URL
-from fetch_radar import analyze_radar_zones  # New logic
-
-# Threshold to trigger rain alert in mm
-RAIN_THRESHOLD = 3
+from fetch_radar import analyze_radar_zones  # Zone-wise AI detection
 
 def fetch_openweather_rain():
     try:
@@ -31,8 +28,9 @@ def fetch_openweather_rain():
 def analyze_rain_data(mock: bool = False):
     logging.info("🔄 Starting rain analysis...")
 
+    # --- MOCK MODE ---
     if mock:
-        logging.info("🧪 MOCK mode active")
+        logging.info("🔄 MOCK mode: generating fake rain alert.")
         rain_data = [("Hour 1", 10), ("Hour 2", 20), ("Hour 3", 30)]
         chart_path = generate_rainfall_chart(rain_data, "mock_chart.png")
         alert_message = "🌧 Mock Rain Alert: Heavy rain expected. Stay safe!"
@@ -40,24 +38,32 @@ def analyze_rain_data(mock: bool = False):
         send_email_alert("🌧 Mock Rain Alert", alert_message, chart_path)
         return {"result": "✅ Mock alert sent"}
 
-    # --- Step 1: Check forecast rain from OpenWeather ---
+    # --- LIVE DATA FETCH ---
     rain_forecast = fetch_openweather_rain()
-    alert_triggered = rain_forecast > RAIN_THRESHOLD
+    radar_zones = analyze_radar_zones()
 
-    # --- Step 2: AI Radar Image Analysis by Zone ---
-    zone_summary, dark_zones = analyze_radar_zones()
-    formatted_zone_text = "\n".join([f"📍 {z}: {emoji}" for z, emoji in zone_summary.items()])
+    # --- MESSAGE COMPOSE ---
+    zone_messages = []
+    rain_detected = False
 
-    # --- Step 3: If rain, generate chart and send alert ---
-    if alert_triggered or dark_zones:
+    for zone, status in radar_zones.items():
+        if status == "rain":
+            zone_messages.append(f"📍 {zone}: 🌧️ Rain detected")
+            rain_detected = True
+        elif status == "cloud":
+            zone_messages.append(f"📍 {zone}: ☁️ Overcast")
+        else:
+            zone_messages.append(f"📍 {zone}: ☀️ Clear")
+
+    full_message = ""
+    if rain_forecast > 3 or rain_detected:
+        full_message = "🌧 Rain Alert: Possible rain over Mumbai!\n" + "\n".join(zone_messages)
         chart_path = generate_rainfall_chart([("Forecast", rain_forecast)], "live_chart.png")
-        alert_msg = f"🌧 Rain Alert: {rain_forecast} mm forecasted.\n\n{formatted_zone_text}"
-        send_telegram_alert(alert_msg, chart_path)
-        send_email_alert("🌧 Rain Alert", alert_msg, chart_path)
-        return {"result": "🚨 Rain alert sent", "zones": zone_summary}
-
-    # --- Step 4: No rain, but still send summary with zones ---
-    no_rain_msg = f"☀️ No rain alerts or forecast available currently.\n\n{formatted_zone_text}"
-    send_telegram_alert(no_rain_msg)
-    send_email_alert("☀️ No Rain Alert", no_rain_msg)
-    return {"result": "☀️ No rain", "zones": zone_summary}
+        send_telegram_alert(full_message, chart_path)
+        send_email_alert("🌧 Rain Alert", full_message, chart_path)
+        return {"result": "🚨 Rain alert sent with zone info"}
+    else:
+        full_message = "☀️ No rain alerts or forecast available currently.\n" + "\n".join(zone_messages)
+        send_telegram_alert(full_message)
+        send_email_alert("☀️ No Rain Alert", full_message)
+        return {"result": full_message}

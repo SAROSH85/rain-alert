@@ -4,57 +4,45 @@ import requests
 from io import BytesIO
 from PIL import Image
 
-RADAR_IMAGE_URL = "https://mausam.imd.gov.in/imd_latest/contents/radar.jpg"
+RADAR_IMAGE_URL = "https://mausam.imd.gov.in/radar_img/Mumbai_latest.png"
 
-# Define coordinates for Mumbai zones (example)
+# Define Mumbai zones with (x1, y1, x2, y2) bounding boxes
 ZONES = {
-    "Colaba": (200, 310),
-    "CST": (220, 300),
-    "Dadar": (240, 290),
-    "Kurla": (260, 280),
-    "Powai": (280, 270),
-    "Thane": (300, 260),
-    "Vashi": (320, 250),
-    "Borivali": (180, 320),
-    "Andheri": (210, 305),
-    "Grant Road": (230, 295),
-    "Mazgaon": (225, 297),
-    "Byculla": (227, 296),
-    "Parel": (235, 292),
-    "Sion": (250, 285),
-    "Ghatkopar": (265, 278),
-    "Vikhroli": (270, 275),
-    "Marine Lines": (215, 299),
-    "Fort": (218, 298),
-    "Lalbaug": (233, 293)
+    "Colaba": (180, 270, 200, 290),
+    "CST": (185, 260, 205, 280),
+    "Dadar": (170, 240, 190, 260),
+    "Powai": (150, 180, 170, 200),
+    "Thane": (140, 160, 160, 180),
+    "Vashi": (200, 220, 220, 240),
 }
 
-def analyze_radar_zones():
+def fetch_and_process_radar_image():
     try:
-        # Step 1: Download radar image
         response = requests.get(RADAR_IMAGE_URL, timeout=10)
         response.raise_for_status()
-        img = Image.open(BytesIO(response.content)).convert("L")  # Convert to grayscale
-
-        # Step 2: Convert to numpy array
-        img_np = np.array(img)
-
-        zone_results = {}
-        rain_detected_zones = []
-
-        for zone, (x, y) in ZONES.items():
-            brightness = np.mean(img_np[y-2:y+2, x-2:x+2])  # 4x4 pixel average
-            if brightness < 70:
-                emoji = "🌧️ Rain detected"
-                rain_detected_zones.append(zone)
-            elif brightness < 120:
-                emoji = "☁️ Overcast"
-            else:
-                emoji = "☀️ Clear"
-            zone_results[zone] = emoji
-
-        return zone_results, rain_detected_zones
-
+        img = Image.open(BytesIO(response.content)).convert("L")  # grayscale
+        return np.array(img)
     except Exception as e:
-        print(f"Radar analysis error: {e}")
-        return {}, []
+        print(f"❌ Failed to fetch radar image: {e}")
+        return None
+
+def analyze_radar_zones():
+    img = fetch_and_process_radar_image()
+    if img is None:
+        return {zone: "⚠️ Image Error" for zone in ZONES}
+
+    results = {}
+    for zone, (x1, y1, x2, y2) in ZONES.items():
+        zone_img = img[y1:y2, x1:x2]
+        brightness = np.mean(zone_img)
+
+        if brightness < 50:
+            status = "🌧️ Rain detected"
+        elif brightness < 100:
+            status = "☁️ Overcast"
+        else:
+            status = "☀️ Clear"
+
+        results[zone] = status
+
+    return results

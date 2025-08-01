@@ -1,18 +1,18 @@
 from datetime import datetime, timedelta
 from hybrid_alert import analyze_rain_data
 
-# Trigger hours in IST: 9 AM to 11 PM
-TRIGGER_HOURS = list(range(9, 24))  # [9, 10, ..., 23]
+# List of trigger hours in IST (hourly from 9 AM to 11 PM)
+TRIGGER_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
 
 def run():
-    # Convert UTC to IST
+    # Convert UTC to IST (+5:30)
     now_utc = datetime.utcnow()
     now_ist = now_utc + timedelta(hours=5, minutes=30)
 
     hour = now_ist.hour
     minute = now_ist.minute
 
-    # Trigger only at 00 minutes past each hour
+    # Trigger only at start of the hour
     if minute == 0 and hour in TRIGGER_HOURS:
         result = analyze_rain_data()
         return {
@@ -24,5 +24,5 @@ def run():
         return {
             "triggered": False,
             "time": now_ist.strftime("%Y-%m-%d %H:%M:%S"),
-            "reason": f"Not in TRIGGER_HOURS or not at 00 minutes (currently {hour}:{minute:02d})"
+            "reason": f"Not in TRIGGER_HOURS or not at 00 minutes (currently {hour}:{minute})"
         }
