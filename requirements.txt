@@ -1,5 +1,8 @@
 fastapi
 uvicorn
+httpx
 requests
+python-dotenv
 matplotlib
-pandas
+opencv-python-headless
+Pillow
