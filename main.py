@@ -16,3 +16,7 @@ async def trigger_cron_alert():
 async def send_alert_now():
     result = analyze_rain_data()
     return {"manual_trigger": True, "result": result}
+    
+@app.post("/alert/timecheck")
+async def alert_if_match():
+    return run()
