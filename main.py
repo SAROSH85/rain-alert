@@ -5,6 +5,10 @@ from utils import get_server_time_info
 
 app = FastAPI()
 
+@app.get("/alert/cron")
+async def trigger_cron_alert():
+    return run()
+
 
 @app.get("/")
 def root():
