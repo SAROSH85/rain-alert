@@ -6,6 +6,8 @@ import logging
 from io import BytesIO
 from PIL import Image
 
+RADAR_IMAGE_URL = "https://mausam.imd.gov.in/Radar/sri_vrv.gif"  # Surface Rainfall Intensity
+
 # Use official IMD radar images
 SRI_URL = "https://mausam.imd.gov.in/Radar/sri_vrv.gif"
 PAC_URL = "https://mausam.imd.gov.in/Radar/pac_vrv.gif"
@@ -35,7 +37,7 @@ ZONES = {
 
 def download_radar_image(url=SRI_URL):
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(RADAR_IMAGE_URL, timeout=10)
         response.raise_for_status()
         with open(TEMP_FILE, "wb") as f:
             f.write(response.content)
@@ -63,14 +65,15 @@ def analyze_radar_zones():
                 zone_status[zone] = "clear"
         return zone_status
         
+            for zone, (x1, y1, x2, y2) in ZONES.items():
+            region = img_array[y1:y2, x1:x2]
             avg_intensity = np.mean(region)
-
             if avg_intensity > 180:
-                status[zone] = "rain"
-            elif avg_intensity > 130:
-                status[zone] = "cloud"
+                zone_status[zone] = "rain"
+            elif avg_intensity > 100:
+                zone_status[zone] = "cloud"
             else:
-                status[zone] = "clear"
+                zone_status[zone] = "clear"
         return status
     except Exception as e:
         logging.error(f"Radar processing error: {e}")

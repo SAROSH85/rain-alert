@@ -18,7 +18,7 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 # --- IMD Data Sources ---
 GFS_URL = "https://mausam.imd.gov.in/api/gfs/mumbai.json"
-RADAR_IMAGE_URL = "https://mausam.imd.gov.in/radar/mumbai_latest.png"
+RADAR_IMAGE_URL = "https://mausam.imd.gov.in/Radar/sri_vrv.gif"
 
 # --- Debug block ---
 if __name__ == "__main__":
