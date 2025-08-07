@@ -3,6 +3,13 @@ import numpy as np
 import requests
 from config import RADAR_IMAGE_URL
 import logging
+from io import BytesIO
+from PIL import Image
+
+# Use official IMD radar images
+SRI_URL = "https://mausam.imd.gov.in/Radar/sri_vrv.gif"
+PAC_URL = "https://mausam.imd.gov.in/Radar/pac_vrv.gif"
+TEMP_FILE = "radar_image.gif"
 
 # Define Mumbai zones with (x1, y1, x2, y2) bounding boxes
 ZONES = {
@@ -26,36 +33,49 @@ ZONES = {
     "Vashi": (200, 210, 220, 230)
 }
 
-def download_radar_image():
+def download_radar_image(url=SRI_URL):
     try:
-        response = requests.get(RADAR_IMAGE_URL, timeout=10)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
-        image_array = np.frombuffer(response.content, np.uint8)
-        return cv2.imdecode(image_array, cv2.IMREAD_GRAYSCALE)
+        with open(TEMP_FILE, "wb") as f:
+            f.write(response.content)
+        return TEMP_FILE
     except Exception as e:
         logging.error(f"Failed to download radar image: {e}")
         return None
 
 def analyze_radar_zones():
     radar_img = download_radar_image()
-    if radar_img is None:
+    if not radar_path:
         return {zone: "unknown" for zone in ZONES}
 
-    zone_status = {}
+    try:
+        img = cv2.imread(radar_path, cv2.IMREAD_GRAYSCALE)
+        zone_status = {}
+        for zone, (x1, y1, x2, y2) in ZONES.items():
+            region = img[y1:y2, x1:x2]
+            avg_brightness = np.mean(region)
+            if avg_brightness < 50:
+                zone_status[zone] = "rain"
+            elif avg_brightness < 100:
+                zone_status[zone] = "cloud"
+            else:
+                zone_status[zone] = "clear"
+        return zone_status
+        
+            avg_intensity = np.mean(region)
 
-    for zone, (x1, y1, x2, y2) in ZONES.items():
-        crop = radar_img[y1:y2, x1:x2]
-        if crop.size == 0:
-            zone_status[zone] = "unknown"
-            continue
+            if avg_intensity > 180:
+                status[zone] = "rain"
+            elif avg_intensity > 130:
+                status[zone] = "cloud"
+            else:
+                status[zone] = "clear"
+        return status
+    except Exception as e:
+        logging.error(f"Radar processing error: {e}")
+        return {zone: "unknown" for zone in ZONES}
 
-        avg_brightness = np.mean(crop)
-
-        if avg_brightness < 50:
-            zone_status[zone] = "rain"
-        elif avg_brightness < 100:
-            zone_status[zone] = "cloud"
-        else:
-            zone_status[zone] = "clear"
-
-    return zone_status
+# Placeholder for public APIs like Zoom Earth or GPM Layer (to be used in future)
+# def fetch_satellite_data():
+#     ...
