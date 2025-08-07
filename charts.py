@@ -40,3 +40,18 @@ def generate_rainfall_chart(rain_data, output_path="rainfall_chart.png"):
     plt.close()
 
     return output_path
+
+def generate_line_chart(data, filename="line_chart.png"):
+    hours = [item[0] for item in data]
+    values = [item[1] for item in data]
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(hours, values, marker='o')
+    plt.title("Hourly Rainfall Forecast")
+    plt.xlabel("Time")
+    plt.ylabel("Rainfall (mm)")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()
+    return filename
