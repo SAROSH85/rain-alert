@@ -27,3 +27,16 @@ async def alert_if_match():
 @app.get("/alert/radar-quick")
 def radar_quick():
     return radar_check()
+    
+import traceback
+
+@app.get("/alert/radar-quick")
+@app.post("/alert/radar-quick")
+def radar_quick_endpoint():
+    try:
+        result = quick_radar_check()
+        return {"status": "success", "result": result}
+    except Exception as e:
+        print("Radar quick check failed:", e)
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
