@@ -28,6 +28,7 @@ def quick_radar_check():
     print(result)
     return result
     
+    """
     Checks for rain >= 1 mm in any Mumbai zone.
     Sends Telegram + Email alerts if detected.
     """
