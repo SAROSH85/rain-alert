@@ -28,7 +28,7 @@ def quick_radar_check():
     print(result)
     return result
     
-    Checks for rain ≥ 1 mm in any Mumbai zone.
+    Checks for rain >= 1 mm in any Mumbai zone.
     Sends Telegram + Email alerts if detected.
     """
     logging.info("🚀 Running Quick Radar Rain Check...")
@@ -37,7 +37,7 @@ def quick_radar_check():
     rain_zones = [zone for zone, status in radar_data.items() if status == "rain"]
 
     if rain_zones:
-        message = "🌧 Quick Rain Alert: Rain ≥ 1 mm detected in:\n" + "\n".join([f"📍 {zone}" for zone in rain_zones])
+        message = "🌧 Quick Rain Alert: Rain >= 1 mm detected in:\n" + "\n".join([f"📍 {zone}" for zone in rain_zones])
         logging.info(message)
 
         # Send alerts
@@ -46,7 +46,7 @@ def quick_radar_check():
 
         return {"triggered": True, "zones": rain_zones}
     else:
-        logging.info("✅ No rain ≥ 1 mm detected in any zone.")
+        logging.info("✅ No rain >= 1 mm detected in any zone.")
         return {"triggered": False, "zones": []}
 
 if __name__ == "__main__":
