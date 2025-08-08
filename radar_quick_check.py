@@ -17,7 +17,7 @@ def check_radar_image_availability():
         logging.error(f"❌ Radar check failed: {e}")
         return False
 
-def quick_radar_check():
+def quick_rain_check():
     logging.basicConfig(level=logging.INFO)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     available = check_radar_image_availability()
