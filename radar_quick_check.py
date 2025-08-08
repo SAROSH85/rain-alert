@@ -1,6 +1,8 @@
 import logging
 import requests
 from datetime import datetime
+from fetch_radar import analyze_radar_zones
+from notify import send_telegram_alert, send_email_alert
 
 # Official IMD Radar (Surface Rainfall Intensity)
 RADAR_IMAGE_URL = "https://mausam.imd.gov.in/Radar/sri_vrv.gif"
@@ -25,6 +27,27 @@ def quick_radar_check():
     }
     print(result)
     return result
+    
+    Checks for rain ≥ 1 mm in any Mumbai zone.
+    Sends Telegram + Email alerts if detected.
+    """
+    logging.info("🚀 Running Quick Radar Rain Check...")
+
+    radar_data = analyze_radar_zones()
+    rain_zones = [zone for zone, status in radar_data.items() if status == "rain"]
+
+    if rain_zones:
+        message = "🌧 Quick Rain Alert: Rain ≥ 1 mm detected in:\n" + "\n".join([f"📍 {zone}" for zone in rain_zones])
+        logging.info(message)
+
+        # Send alerts
+        send_telegram_alert(message)
+        send_email_alert("🌧 Quick Rain Alert", message)
+
+        return {"triggered": True, "zones": rain_zones}
+    else:
+        logging.info("✅ No rain ≥ 1 mm detected in any zone.")
+        return {"triggered": False, "zones": []}
 
 if __name__ == "__main__":
     quick_radar_check()

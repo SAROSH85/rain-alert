@@ -1,7 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from run_alert_if_time_matches import run
 from hybrid_alert import analyze_rain_data
-from radar_quick_check import radar_check
+from radar_quick_check import quick_rain_check
 
 app = FastAPI()
 
@@ -9,8 +9,9 @@ app = FastAPI()
 async def root():
     return {"status": "✅ Rain Alert system is live"}
 
+@app.post("/alert/cron")
 @app.get("/alert/cron")
-async def trigger_cron_alert():
+def alert_cron():
     return run()
 
 @app.get("/alert/send")
@@ -22,6 +23,7 @@ async def send_alert_now():
 async def alert_if_match():
     return run()
     
+@app.post("/alert/radar-quick")
 @app.get("/alert/radar-quick")
-def quick_radar_alert():
+def radar_quick():
     return radar_check()
