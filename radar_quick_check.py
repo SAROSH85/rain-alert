@@ -1,64 +1,55 @@
 import os
 import requests
-from io import BytesIO
-from PIL import Image
-from fetch_radar import ZONES  # Reuse your exact zone list
+from fetch_radar import analyze_radar_image, ZONES
 from notify import send_telegram_alert, send_email_alert
+from tabulate import tabulate
 
-# IMD radar sources
-SRI_URL = "https://mausam.imd.gov.in/Radar/sri_vrv.gif"  # Surface Rainfall Intensity
-PAC_URL = "https://mausam.imd.gov.in/Radar/pac_vrv.gif"  # Precipitation Accumulation
+# Official IMD radar sources
+SRI_URL = "https://mausam.imd.gov.in/Radar/sri_vrv.gif"
+PAC_URL = "https://mausam.imd.gov.in/Radar/pac_vrv.gif"
 
-RAIN_THRESHOLD = 1.0  # mm
-
-def download_radar_image(url):
-    """Download radar image from the given URL."""
-    resp = requests.get(url, timeout=15)
-    resp.raise_for_status()
-    return Image.open(BytesIO(resp.content))
-
-def analyze_radar_for_rain(image):
-    """
-    Analyze radar image and return zones where rain >= threshold.
-    This assumes pixel intensity correlates with mm/h rainfall.
-    """
-    detected_zones = []
-    for zone, (x1, y1, x2, y2) in ZONES.items():
-        crop = image.crop((x1, y1, x2, y2)).convert("L")  # grayscale
-        avg_pixel = sum(crop.getdata()) / (crop.width * crop.height)
-        # Simple mapping: assume pixel intensity 255 = ~50 mm/h
-        rainfall_mm = (avg_pixel / 255) * 50
-        if rainfall_mm >= RAIN_THRESHOLD:
-            detected_zones.append((zone, round(rainfall_mm, 1)))
-    return detected_zones
+RAIN_THRESHOLD_MM = 1.0  # Minimum rain to trigger alert
 
 def radar_quick_check():
-    """Quick radar check for rain ≥ threshold."""
     try:
-        sri_image = download_radar_image(SRI_URL)
-    except Exception as e:
-        return {"error": f"Failed to download radar image: {e}"}
+        # Download SRI
+        sri_resp = requests.get(SRI_URL, timeout=15)
+        sri_resp.raise_for_status()
+        with open("sri.gif", "wb") as f:
+            f.write(sri_resp.content)
 
-    zones_with_rain = analyze_radar_for_rain(sri_image)
+        # Download PAC
+        pac_resp = requests.get(PAC_URL, timeout=15)
+        pac_resp.raise_for_status()
+        with open("pac.gif", "wb") as f:
+            f.write(pac_resp.content)
 
-    if not zones_with_rain:
-        return {"result": "No rain above threshold detected"}
+        # Analyze images for all zones
+        sri_data = analyze_radar_image("sri.gif", ZONES)
+        pac_data = analyze_radar_image("pac.gif", ZONES)
 
-    # Prepare alert text
-    alert_lines = [f"🌧 Quick Rain Alert (≥ {RAIN_THRESHOLD} mm)"]
-    for zone, rain in zones_with_rain:
-        alert_lines.append(f"📍 {zone}: {rain} mm/h")
-    alert_msg = "\n".join(alert_lines)
+        table_data = []
+        for zone in ZONES.keys():
+            sri_mm = sri_data.get(zone, 0)
+            pac_mm = pac_data.get(zone, 0)
+            if sri_mm >= RAIN_THRESHOLD_MM and pac_mm >= RAIN_THRESHOLD_MM:
+                table_data.append([zone, f"{sri_mm:.1f}", f"{pac_mm:.1f}"])
 
-    # Send notifications
-    try:
+        # If no alerts, do nothing
+        if not table_data:
+            return {"status": "no_alert", "alerts": []}
+
+        # Prepare message
+        header = "🚨 Quick Rain Alert (≥ 1 mm in both SRI & PAC)\n"
+        table_str = tabulate(table_data, headers=["Zone", "SRI mm", "PAC mm"], tablefmt="grid")
+
+        alert_msg = f"{header}\n```\n{table_str}\n```"
+
+        # Send alerts
         send_telegram_alert(alert_msg)
-    except Exception as e:
-        print(f"❌ Telegram error: {e}")
+        send_email_alert("Quick Rain Alert", f"{header}\n{table_str}")
 
-    try:
-        send_email_alert("Quick Rain Alert", alert_msg)
-    except Exception as e:
-        print(f"❌ Email error: {e}")
+        return {"status": "alert_sent", "alerts": table_data}
 
-    return {"result": "✅ Quick alert sent", "zones": zones_with_rain}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
