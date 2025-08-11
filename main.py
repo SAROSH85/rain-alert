@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from run_alert_if_time_matches import run
 from hybrid_alert import analyze_rain_data
-from radar_quick_check import quick_rain_check
+from radar_quick_check import radar_quick_check
 
 app = FastAPI()
 
@@ -26,7 +26,7 @@ async def alert_if_match():
 @app.post("/alert/radar-quick")
 @app.get("/alert/radar-quick")
 def radar_quick():
-    return radar_check()
+    return radar_quick_check()
     
 import traceback
 
@@ -34,7 +34,7 @@ import traceback
 @app.post("/alert/radar-quick")
 def radar_quick_endpoint():
     try:
-        result = quick_radar_check()
+        result = radar_quick_check()
         return {"status": "success", "result": result}
     except Exception as e:
         print("Radar quick check failed:", e)
