@@ -1,75 +1,64 @@
-import logging
+import os
 import requests
-from datetime import datetime
-from fetch_radar import analyze_radar_zones
+from io import BytesIO
+from PIL import Image
+from fetch_radar import ZONES  # Reuse your exact zone list
 from notify import send_telegram_alert, send_email_alert
 
-# Official IMD Radar (Surface Rainfall Intensity)
-RADAR_IMAGE_URL = "https://mausam.imd.gov.in/Radar/sri_vrv.gif"
+# IMD radar sources
+SRI_URL = "https://mausam.imd.gov.in/Radar/sri_vrv.gif"  # Surface Rainfall Intensity
+PAC_URL = "https://mausam.imd.gov.in/Radar/pac_vrv.gif"  # Precipitation Accumulation
 
-def check_radar_image_availability():
+RAIN_THRESHOLD = 1.0  # mm
+
+def download_radar_image(url):
+    """Download radar image from the given URL."""
+    resp = requests.get(url, timeout=15)
+    resp.raise_for_status()
+    return Image.open(BytesIO(resp.content))
+
+def analyze_radar_for_rain(image):
+    """
+    Analyze radar image and return zones where rain >= threshold.
+    This assumes pixel intensity correlates with mm/h rainfall.
+    """
+    detected_zones = []
+    for zone, (x1, y1, x2, y2) in ZONES.items():
+        crop = image.crop((x1, y1, x2, y2)).convert("L")  # grayscale
+        avg_pixel = sum(crop.getdata()) / (crop.width * crop.height)
+        # Simple mapping: assume pixel intensity 255 = ~50 mm/h
+        rainfall_mm = (avg_pixel / 255) * 50
+        if rainfall_mm >= RAIN_THRESHOLD:
+            detected_zones.append((zone, round(rainfall_mm, 1)))
+    return detected_zones
+
+def radar_quick_check():
+    """Quick radar check for rain ≥ threshold."""
     try:
-        response = requests.get(RADAR_IMAGE_URL, timeout=10)
-        response.raise_for_status()
-        logging.info("✅ IMD radar image available.")
-        return True
+        sri_image = download_radar_image(SRI_URL)
     except Exception as e:
-        logging.error(f"❌ Radar check failed: {e}")
-        return False
+        return {"error": f"Failed to download radar image: {e}"}
 
-def quick_rain_check():
-    logging.basicConfig(level=logging.INFO)
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    available = check_radar_image_availability()
-    result = {
-        "time": now,
-        "radar_available": available
-    }
-    print(result)
-    return result
-    
-    """
-    Checks for rain >= 1 mm in any Mumbai zone.
-    Sends Telegram + Email alerts if detected.
-    """
-    logging.info("🚀 Running Quick Radar Rain Check...")
+    zones_with_rain = analyze_radar_for_rain(sri_image)
 
-    radar_data = analyze_radar_zones()
-    rain_zones = [zone for zone, status in radar_data.items() if status == "rain"]
+    if not zones_with_rain:
+        return {"result": "No rain above threshold detected"}
 
-    if rain_zones:
-        message = "🌧 Quick Rain Alert: Rain >= 1 mm detected in:\n" + "\n".join([f"📍 {zone}" for zone in rain_zones])
-        logging.info(message)
+    # Prepare alert text
+    alert_lines = [f"🌧 Quick Rain Alert (≥ {RAIN_THRESHOLD} mm)"]
+    for zone, rain in zones_with_rain:
+        alert_lines.append(f"📍 {zone}: {rain} mm/h")
+    alert_msg = "\n".join(alert_lines)
 
-        # Send alerts
-        send_telegram_alert(message)
-        send_email_alert("🌧 Quick Rain Alert", message)
+    # Send notifications
+    try:
+        send_telegram_alert(alert_msg)
+    except Exception as e:
+        print(f"❌ Telegram error: {e}")
 
-        return {"triggered": True, "zones": rain_zones}
-    else:
-        logging.info("✅ No rain >= 1 mm detected in any zone.")
-        return {"triggered": False, "zones": []}
+    try:
+        send_email_alert("Quick Rain Alert", alert_msg)
+    except Exception as e:
+        print(f"❌ Email error: {e}")
 
-if __name__ == "__main__":
-    quick_radar_check()
-    
-# radar_quick_check.py
-
-from fetch_radar import analyze_radar_zones
-
-def radar_check():
-    zones = analyze_radar_zones()
-    zone_messages = []
-
-    for zone, status in zones.items():
-        if status == "rain":
-            zone_messages.append(f"📍 {zone}: 🌧️ Rain detected")
-        elif status == "cloud":
-            zone_messages.append(f"📍 {zone}: ☁️ Overcast")
-        elif status == "clear":
-            zone_messages.append(f"📍 {zone}: ☀️ Clear")
-        else:
-            zone_messages.append(f"📍 {zone}: ❓ Unknown")
-
-    full_message = "🕒 Quick Radar Check (Every 10 mins)\n" + "\n".join(zone_messages)
-    return {"message": full_message, "zones": zones}
+    return {"result": "✅ Quick alert sent", "zones": zones_with_rain}

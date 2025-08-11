@@ -1,42 +1,21 @@
 from fastapi import FastAPI, Request
-from run_alert_if_time_matches import run
 from hybrid_alert import analyze_rain_data
 from radar_quick_check import radar_quick_check
 
 app = FastAPI()
 
 @app.get("/")
-async def root():
-    return {"status": "✅ Rain Alert system is live"}
+def home():
+    return {"status": "Rain Alert API Running"}
 
-@app.post("/alert/cron")
-@app.get("/alert/cron")
-def alert_cron():
-    return run()
+@app.get("/alert/hourly")
+@app.post("/alert/hourly")
+def hourly_alert():
+    """Runs the main rain analysis (your 30-min/hourly alert)."""
+    return analyze_rain_data(mock=False)
 
-@app.get("/alert/send")
-async def send_alert_now():
-    result = analyze_rain_data()
-    return {"manual_trigger": True, "result": result}
-    
-@app.post("/alert/timecheck")
-async def alert_if_match():
-    return run()
-    
-@app.post("/alert/radar-quick")
 @app.get("/alert/radar-quick")
-def radar_quick():
+@app.post("/alert/radar-quick")
+def quick_radar_alert():
+    """Runs the quick 10-min radar check."""
     return radar_quick_check()
-    
-import traceback
-
-@app.get("/alert/radar-quick")
-@app.post("/alert/radar-quick")
-def radar_quick_endpoint():
-    try:
-        result = radar_quick_check()
-        return {"status": "success", "result": result}
-    except Exception as e:
-        print("Radar quick check failed:", e)
-        traceback.print_exc()
-        return {"status": "error", "message": str(e)}
