@@ -1,6 +1,6 @@
 import os
 import requests
-from fetch_radar import analyze_radar_image, ZONES
+from fetch_radar import analyze_radar_zones, ZONES
 from notify import send_telegram_alert, send_email_alert
 from tabulate import tabulate
 
@@ -25,8 +25,8 @@ def radar_quick_check():
             f.write(pac_resp.content)
 
         # Analyze images for all zones
-        sri_data = analyze_radar_image("sri.gif", ZONES)
-        pac_data = analyze_radar_image("pac.gif", ZONES)
+        sri_data = analyze_radar_zones("sri.gif", ZONES)
+        pac_data = analyze_radar_zones("pac.gif", ZONES)
 
         table_data = []
         for zone in ZONES.keys():
