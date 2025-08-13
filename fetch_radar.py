@@ -29,29 +29,44 @@ ZONES = {
     "Vashi": (125, 195, 145, 215),
 }
 
-def analyze_radar_zones():
-    zones = {
-        "Colaba": {"status": "clear", "mm": 0.0},
-        "CST": {"status": "clear", "mm": 0.0},
-        # ... rest of your current zone list
-    }
-
-    # Your existing radar analysis logic here...
-    # Instead of only assigning "rain", also estimate mm
-for zone in zones:
+def detect_rainfall_for_zone(image, coords):
+    """Simple placeholder logic to detect rainfall in mm from radar pixels."""
     try:
-            
-        rainfall_mm = detect_rainfall_for_zone(zone)  # Your radar logic
-        if rainfall_mm >= 1:
-            zones[zone]["status"] = "rain"
-        elif 0 < rainfall_mm < 1:
-            zones[zone]["status"] = "cloud"
-        else:
-            zones[zone]["status"] = "clear"
-        zones[zone]["mm"] = round(rainfall_mm, 1)
+        x1, y1, x2, y2 = coords
+        zone_crop = image.crop((x1, y1, x2, y2))
+        zone_array = np.array(zone_crop)
 
-    return zones
+        # Example: detect brightness → rainfall estimation
+        avg_intensity = np.mean(zone_array)
+        rainfall_mm = round((avg_intensity / 255) * 10, 1)  # scale 0-10 mm
+        return rainfall_mm
+    except Exception as e:
+        logging.error(f"Rainfall detection failed for zone: {e}")
+        return 0.0
+
+def analyze_radar_zones():
+    """Fetch radar image, analyze each zone, and return dict of rain status & mm."""
+    zones_result = {zone: {"status": "unknown", "mm": 0.0} for zone in ZONES}
+
+    try:
+        # Download radar image
+        resp = requests.get(RADAR_IMAGE_URL, timeout=10)
+        resp.raise_for_status()
+        radar_img = Image.open(BytesIO(resp.content)).convert("RGB")
+
+        for zone, coords in ZONES.items():
+            rainfall_mm = detect_rainfall_for_zone(radar_img, coords)
+            zones_result[zone]["mm"] = rainfall_mm
+
+            if rainfall_mm >= 1:
+                zones_result[zone]["status"] = "rain"
+            elif 0 < rainfall_mm < 1:
+                zones_result[zone]["status"] = "cloud"
+            else:
+                zones_result[zone]["status"] = "clear"
+
+        return zones_result
 
     except Exception as e:
         logging.error(f"Failed to analyze radar zones: {e}")
-        return {zone: "unknown" for zone in ZONES}
+        return {zone: {"status": "unknown", "mm": 0.0} for zone in ZONES}
