@@ -8,7 +8,7 @@ app = FastAPI()
 def root():
     return {"status": "Rain Alert Service is running"}
 
-# Original scheduled alert
+# Original scheduled alert (runs only at configured times)
 @app.get("/alert/timecheck")
 def timecheck_alert():
     try:
@@ -17,7 +17,7 @@ def timecheck_alert():
     except Exception as e:
         return {"error": str(e)}
 
-# Quick radar check every 10 minutes for ≥ 1mm rain
+# Quick radar check for ≥ 1mm rain
 @app.get("/alert/radar-quick")
 def radar_quick_alert():
     try:
@@ -26,7 +26,7 @@ def radar_quick_alert():
     except Exception as e:
         return {"error": str(e)}
 
-# Optional POST support for automation tools
+# Optional POST endpoints for automation
 @app.post("/alert/timecheck")
 def timecheck_alert_post():
     return timecheck_alert()
