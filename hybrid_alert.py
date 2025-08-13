@@ -90,9 +90,10 @@ def analyze_rain_data(mock: bool = False):
 
     if rain_detected:
         # Prepare radar chart data
-        zone_chart_data = [(z, 1.0 if s == "rain" else 0.0) for z, s in radar_zones.items()]
+        zone_chart_data = [(zone, data["mm"]) for zone, data in radar_zones.items()]
         chart1 = generate_line_chart(forecast_data, "forecast_line.png")
         chart2 = generate_colored_bar_chart(zone_chart_data, "zones_bar.png")
+
 
         # Build message
         message = "🌧 Rain Alert: Possible rain over Mumbai!\n"

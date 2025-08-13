@@ -30,25 +30,26 @@ ZONES = {
 }
 
 def analyze_radar_zones():
-    try:
-        response = requests.get(RADAR_IMAGE_URL, timeout=10)
-        response.raise_for_status()
-        img = Image.open(BytesIO(response.content)).convert("L")  # Convert to grayscale
-        img_array = np.array(img)
+    zones = {
+        "Colaba": {"status": "clear", "mm": 0.0},
+        "CST": {"status": "clear", "mm": 0.0},
+        # ... rest of your current zone list
+    }
 
-        zone_status = {}
-        for zone, (x1, y1, x2, y2) in ZONES.items():
-            region = img_array[y1:y2, x1:x2]
-            avg_intensity = np.mean(region)
+    # Your existing radar analysis logic here...
+    # Instead of only assigning "rain", also estimate mm
+    for zone in zones:
+        # Example dummy logic for now
+        rainfall_mm = detect_rainfall_for_zone(zone)  # Your radar logic
+        if rainfall_mm >= 1:
+            zones[zone]["status"] = "rain"
+        elif 0 < rainfall_mm < 1:
+            zones[zone]["status"] = "cloud"
+        else:
+            zones[zone]["status"] = "clear"
+        zones[zone]["mm"] = round(rainfall_mm, 1)
 
-            if avg_intensity > 180:
-                zone_status[zone] = "rain"
-            elif avg_intensity > 100:
-                zone_status[zone] = "cloud"
-            else:
-                zone_status[zone] = "clear"
-
-        return zone_status
+    return zones
 
     except Exception as e:
         logging.error(f"Failed to analyze radar zones: {e}")
