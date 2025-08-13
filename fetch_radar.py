@@ -38,8 +38,9 @@ def analyze_radar_zones():
 
     # Your existing radar analysis logic here...
     # Instead of only assigning "rain", also estimate mm
-    for zone in zones:
-        # Example dummy logic for now
+for zone in zones:
+    try:
+            
         rainfall_mm = detect_rainfall_for_zone(zone)  # Your radar logic
         if rainfall_mm >= 1:
             zones[zone]["status"] = "rain"
