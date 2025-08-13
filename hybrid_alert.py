@@ -1,13 +1,13 @@
 import logging
 import requests
-from charts import generate_rainfall_chart, generate_colored_bar_chart
+from charts import generate_rainfall_chart, generate_colored_bar_chart, generate_line_chart
 from notify import send_telegram_alert, send_email_alert
 from config import LAT, LON, OPENWEATHER_API_KEY
-from fetch_radar import analyze_radar_zones, ZONES
+from fetch_radar import analyze_radar_zones
 
 def fetch_openweather_rain():
     try:
-        url = "https://api.openweathermap.org/data/2.5/weather"
+        url = "https://api.openweathermap.org/data/2.5/forecast"
         params = {
             "lat": LAT,
             "lon": LON,
@@ -18,59 +18,49 @@ def fetch_openweather_rain():
         response.raise_for_status()
         data = response.json()
 
-        rain_1h = data.get("rain", {}).get("1h", 0)
-        logging.info(f"🌧 OpenWeather Rain 1h: {rain_1h} mm")
-        return rain_1h
+        hourly_data = []
+        for entry in data["list"][:6]:  # Next 6 hours
+            time_str = entry["dt_txt"].split(" ")[1][:5]
+            rain_mm = entry.get("rain", {}).get("3h", 0) / 3  # Convert 3h to 1h avg
+            hourly_data.append((time_str, round(rain_mm, 1)))
+
+        return hourly_data
     except Exception as e:
-        logging.error(f"❌ OpenWeather API error: {e}")
-        return 0
+        logging.error(f"OpenWeather API error: {e}")
+        return []
 
 def analyze_rain_data(mock: bool = False):
     logging.info("🔄 Starting rain analysis...")
 
-    # --- MOCK MODE ---
     if mock:
-        logging.info("🔄 MOCK mode: generating fake rain alert.")
-        rain_data = [("Hour 1", 0.5), ("Hour 2", 1.2), ("Hour 3", 2.0)]
-        chart_line = generate_rainfall_chart(rain_data, "mock_line.png")
-        chart_bar = generate_colored_bar_chart(rain_data, "mock_bar.png")
-        alert_message = "🌧 Mock Rain Alert: Heavy rain expected. Stay safe!"
-        send_telegram_alert(alert_message, [chart_line, chart_bar])
-        send_email_alert("🌧 Mock Rain Alert", alert_message, [chart_line, chart_bar])
+        logging.info("MOCK mode: generating fake rain alert.")
+        rain_data = [("12:00", 2), ("15:00", 5), ("18:00", 12)]
+        chart1 = generate_rainfall_chart(rain_data, "mock_forecast.png")
+        chart2 = generate_colored_bar_chart([("Zone1", 0.5), ("Zone2", 2)], "mock_zones.png")
+        send_telegram_alert("🌧 Mock Rain Alert", chart1, chart2)
+        send_email_alert("🌧 Mock Rain Alert", "Mock data", chart1, chart2)
         return {"result": "✅ Mock alert sent"}
 
-    # --- LIVE DATA FETCH ---
-    rain_forecast = fetch_openweather_rain()
+    forecast_data = fetch_openweather_rain()
     radar_zones = analyze_radar_zones()
 
-    # --- MESSAGE COMPOSE ---
-    zone_messages = []
-    rain_detected = False
-    bar_data = []
+    rain_detected = any(v == "rain" for v in radar_zones.values()) or any(mm >= 1 for _, mm in forecast_data)
 
-    for zone in ZONES:
-        status = radar_zones.get(zone, "clear")
-        if status == "rain":
-            zone_messages.append(f"📍 {zone}: 🌧️ Rain detected")
-            bar_data.append((zone, 1.2))  # Assume ≥ 1 mm for radar detection
-            rain_detected = True
-        elif status == "cloud":
-            zone_messages.append(f"📍 {zone}: ☁️ Overcast")
-            bar_data.append((zone, 0.5))
-        else:
-            zone_messages.append(f"📍 {zone}: ☀️ Clear")
-            bar_data.append((zone, 0.0))
+    if rain_detected:
+        zone_chart_data = [(z, 1.0 if s == "rain" else 0.0) for z, s in radar_zones.items()]
+        chart1 = generate_line_chart(forecast_data, "forecast_line.png")
+        chart2 = generate_colored_bar_chart(zone_chart_data, "zones_bar.png")
 
-    # --- SEND ALERTS ---
-    if rain_forecast >= 1 or rain_detected:
-        full_message = "🌧 Rain Alert: Possible rain over Mumbai!\n" + "\n".join(zone_messages)
-        chart_line = generate_rainfall_chart([("Forecast", rain_forecast)], "live_line.png")
-        chart_bar = generate_colored_bar_chart(bar_data, "live_bar.png")
-        send_telegram_alert(full_message, [chart_line, chart_bar])
-        send_email_alert("🌧 Rain Alert", full_message, [chart_line, chart_bar])
-        return {"result": "🚨 Rain alert sent with charts"}
+        message = "🌧 Rain Alert: Possible rain over Mumbai!\n"
+        for zone, status in radar_zones.items():
+            emoji = "🌧️" if status == "rain" else "☁️" if status == "cloud" else "☀️"
+            message += f"📍 {zone}: {emoji} {status}\n"
+
+        send_telegram_alert(message, chart1, chart2)
+        send_email_alert("🌧 Rain Alert", message, chart1, chart2)
+        return {"result": "🚨 Rain alert sent"}
     else:
-        full_message = "☀️ No rain alerts currently.\n" + "\n".join(zone_messages)
-        send_telegram_alert(full_message)
-        send_email_alert("☀️ No Rain Alert", full_message)
-        return {"result": full_message}
+        message = "☀️ No rain detected in forecast or radar."
+        send_telegram_alert(message)
+        send_email_alert("☀️ No Rain Alert", message)
+        return {"result": message}
