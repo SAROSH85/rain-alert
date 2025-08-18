@@ -12,19 +12,9 @@ RAIN_THRESHOLD_MM = 1.0  # Minimum rain to trigger alert
 
 def radar_quick_check():
     try:
-        # Analyze zones from live radar (SRI)
-        sri_data = analyze_radar_zones()
-
-        # Fetch PAC image separately (not yet used in detect)
-        pac_resp = requests.get(PAC_URL, timeout=15)
-        pac_resp.raise_for_status()
-        pac_path = "pac.gif"
-        with open(pac_path, "wb") as f:
-            f.write(pac_resp.content)
-
-        # For now, reuse analyze_radar_zones() output for PAC too
-        # (later you can extend fetch_radar.py to analyze PAC image directly)
-        pac_data = sri_data  
+        # Analyze both radars directly from IMD
+        sri_data = analyze_radar_zones(SRI_URL)
+        pac_data = analyze_radar_zones(PAC_URL)
 
         table_data = []
         for zone in ZONES.keys():
@@ -37,13 +27,14 @@ def radar_quick_check():
             if sri_mm >= RAIN_THRESHOLD_MM and pac_mm >= RAIN_THRESHOLD_MM:
                 table_data.append([zone, f"{sri_mm:.1f}", f"{pac_mm:.1f}"])
 
-        # If no alerts, do nothing
+        # If no alerts, stop here
         if not table_data:
             return {"status": "no_alert", "alerts": []}
 
         # Prepare message
         header = "🚨 Quick Rain Alert (≥ 1 mm in both SRI & PAC)\n"
         table_str = tabulate(table_data, headers=["Zone", "SRI mm", "PAC mm"], tablefmt="grid")
+
         alert_msg = f"{header}\n```\n{table_str}\n```"
 
         # Send alerts
