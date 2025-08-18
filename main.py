@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from run_alert_if_time_matches import run_scheduled_alert
 from radar_quick_check import radar_quick_check
+from hybrid_alert import analyze_rain_data
 
 app = FastAPI()
 
@@ -8,19 +9,21 @@ app = FastAPI()
 def root():
     return {"status": "Rain Alert Service is running"}
 
-# Endpoint for 30-min scheduled alert
+# Original scheduled alert
 @app.get("/alert/timecheck")
 def timecheck_alert():
     try:
-        return {"result": run_scheduled_alert()}
+        result = run_scheduled_alert()
+        return {"result": result}
     except Exception as e:
         return {"error": str(e)}
 
-# Endpoint for quick radar check every 10 min (≥1 mm rain filter is in radar_quick_check)
+# Quick radar check every 10 minutes for ≥ 1mm rain
 @app.get("/alert/radar-quick")
 def radar_quick_alert():
     try:
-        return {"result": radar_quick_check()}
+        result = radar_quick_check()
+        return {"result": result}
     except Exception as e:
         return {"error": str(e)}
 
@@ -32,3 +35,12 @@ def timecheck_alert_post():
 @app.post("/alert/radar-quick")
 def radar_quick_alert_post():
     return radar_quick_alert()
+
+# ✅ NEW: Test endpoint to force alerts
+@app.get("/alert/test")
+def test_alert():
+    try:
+        result = analyze_rain_data(mock=True)
+        return {"result": result}
+    except Exception as e:
+        return {"error": str(e)}
