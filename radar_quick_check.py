@@ -27,8 +27,11 @@ def radar_quick_check():
 
         table_data = []
         for zone in ZONES.keys():
-            sri_mm = sri_data.get(zone, 0)
-            pac_mm = pac_data.get(zone, 0)
+            sri_info = sri_data.get(zone, {"mm": 0})
+            pac_info = pac_data.get(zone, {"mm": 0})
+            sri_mm = sri_info["mm"]
+            sri_mm = sri_info["mm"]
+            
             if sri_mm >= RAIN_THRESHOLD_MM and pac_mm >= RAIN_THRESHOLD_MM:
                 table_data.append([zone, f"{sri_mm:.1f}", f"{pac_mm:.1f}"])
 
