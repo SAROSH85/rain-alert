@@ -12,11 +12,8 @@ RAIN_THRESHOLD_MM = 1.0  # Minimum rain to trigger alert
 
 def radar_quick_check():
     try:
-        # Download SRI
-        sri_resp = requests.get(SRI_URL, timeout=15)
-        sri_resp.raise_for_status()
-        with open("sri.gif", "wb") as f:
-            f.write(sri_resp.content)
+        # Analyze zones using IMD radar (SRI)
+        sri_data = analyze_radar_zones()
 
         # Download PAC
         pac_resp = requests.get(PAC_URL, timeout=15)

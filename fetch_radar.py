@@ -38,14 +38,17 @@ def detect_rainfall_for_zone(image, coords):
 
         # Example: detect brightness → rainfall estimation
         avg_intensity = np.mean(zone_array)
-        rainfall_mm = round((avg_intensity / 255) * 10, 1)  # scale 0-10 mm
+        rainfall_mm = round((avg_intensity / 255) * 10, 1)  # scale 0–10 mm
         return rainfall_mm
     except Exception as e:
         logging.error(f"Rainfall detection failed for zone: {e}")
         return 0.0
 
-def analyze_radar_zones():
-    """Fetch radar image, analyze each zone, and return dict of rain status & mm."""
+def analyze_radar_zones(lat=None, lon=None):
+    """
+    Fetch radar image, analyze each zone, and return dict of rain status & mm.
+    lat/lon args are accepted for compatibility but ignored (zones are fixed).
+    """
     zones_result = {zone: {"status": "unknown", "mm": 0.0} for zone in ZONES}
 
     try:
